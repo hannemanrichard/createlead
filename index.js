@@ -34,7 +34,7 @@ const start = async () => {
   try {
     // Retrieve parcels payment_status=not-ready&
     const parcelsResponse = await axios.get(
-      `https://api.yalidine.app/v1/parcels/?order_by=date_last_status&page_size=50&page=1`,
+      `https://api.yalidine.app/v1/parcels/?order_by=date_last_status&page_size=50`,
       {
         headers: {
           "X-API-ID": "92129974643421801058",
@@ -47,14 +47,8 @@ const start = async () => {
       tracking: parcel.tracking,
       first_name: parcel.firstname,
       last_name: parcel.familyname,
-      created_at: changeTimeZone(
-        new Date(parcel.date_creation),
-        "Europe/London"
-      ),
-      date_last_status: changeTimeZone(
-        new Date(parcel.date_last_status),
-        "Europe/London"
-      ),
+      created_at: new Date(parcel.date_creation),
+      date_last_status: new Date(parcel.date_last_status),
       phone: parcel.contact_phone,
       wilaya: parcel.to_wilaya_name,
       commune: parcel.to_commune_name,
@@ -63,7 +57,7 @@ const start = async () => {
       last_status: parcel.last_status,
       address: parcel.address,
       payment_status: parcel.payment_status,
-      tracker_id: +parcel.order_id.replace("order_", ""),
+      tracker_id: 16 /* +parcel.order_id.replace("order_", "") */,
       is_stopdesk: parcel.is_stopdesk,
       price: parcel.price,
       delivery_fee: parcel.delivery_fee,
@@ -86,10 +80,7 @@ const start = async () => {
     // console.log(historiesResponse.data.data);
     const histories = historiesResponse.data.data.map((history) => ({
       tracking: history.tracking,
-      created_at: changeTimeZone(
-        new Date(history.date_status),
-        "Europe/London"
-      ),
+      created_at: history.date_status,
       status: history.status,
       reason: history.reason,
       center_name: history.center_name,
@@ -137,5 +128,3 @@ const start = async () => {
 };
 
 start();
-// }
-// );
