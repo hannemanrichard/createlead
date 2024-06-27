@@ -58,10 +58,12 @@ const start = async () => {
       address: parcel.address,
       payment_status: parcel.payment_status,
       tracker_id: 16 /* +parcel.order_id.replace("order_", "") */,
-      is_stopdesk: parcel.is_stopdesk,
+      is_stopdesk: !!parcel.stopdesk_id,
       price: parcel.price,
       delivery_fee: parcel.delivery_fee,
     }));
+
+
 
     // Extract tracking numbers
     const trackings = parcels.map((parcel) => parcel.tracking);
