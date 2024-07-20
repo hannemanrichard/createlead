@@ -62,10 +62,10 @@ const start = async () => {
       console.log(`API called: ${i}`)
       parcelsResponse.data.data.forEach((parcel) => {
           if (parcel.status) {
-            const deliveredStatus = ['encaissé_non_payé', 'livré_non_encaissé', 'payé_et_archivé', 'paiements_prets']
-            const returnedStatus = ['retour_chez_livreur', 'retour_transit_entrepot', 'retour_en_traitement', 'retour_recu', 'retour_archive', 'annule']
-
             let orderStatus;
+            const deliveredStatus = ['encaissé_non_payé', 'livré_non_encaissé', 'payé_et_archivé', 'paiements_prets']
+            const returnedStatus = ['retour_chez_livreur', 'retour_transit_entrepot', 'retour_en_traitement', 'retour_reçu', 'retour_archive', 'annule']
+
             if (deliveredStatus.includes(parcel.status)) {
               orderStatus = 'delivered'
             }
@@ -78,21 +78,29 @@ const start = async () => {
             }
 
 
+            parcels.push({
+              tracking: parcel.tracking,
+              last_status: parcel.status,
+              status: orderStatus
+            })
+            /*if (!!orderStatus) {
 
-            if (!!orderStatus) {
-              parcels.push({
-                tracking: parcel.tracking,
-                last_status: parcel.status,
-                status: orderStatus
-              })
             } else {
               parcels.push({
                 tracking: parcel.tracking,
                 last_status: parcel.status
               })
-            }
+            }*/
+            //console.log(orderStatus)
+          } else {
 
-          }}
+            parcels.push({
+              tracking: parcel.tracking,
+              status: 'processing',
+            })
+            //console.log('processing')
+          }
+      }
       );
     }
 
@@ -106,10 +114,10 @@ const start = async () => {
           .eq('tracking_id', parcel.tracking)
           .single()
 
-      if (data && data.last_status !== parcel.last_status) {
-        console.log('in')
+      if (data && data.dc_recent_status !== parcel.last_status) {
+        console.log(parcel.last_status)
         let dataOrder, errorOrder;
-        if (data.status !== 'delivered' && data.status !== 'returned') {
+        if (data.status !== 'delivered' ) {
           if (data.status !== parcel.status) {
             const {data: dataLocal, error: errorLocal} = await supabase
                 .from('orders')
@@ -125,9 +133,9 @@ const start = async () => {
           } else {
             const {data: dataLocal, error: errorLocal} = await supabase
                 .from('orders')
-                .update({
-                  dc_recent_status: parcel.last_status,
-                })
+                .update(parcel.last_status ? {
+                  dc_recent_status: parcel.last_status,status: parcel.status
+                } : {status: parcel.status})
                 .eq('tracking_id', parcel.tracking)
                 .select()
             dataOrder = dataLocal;
@@ -136,7 +144,7 @@ const start = async () => {
 
 
           if (data) {
-            console.log(`${parcel.tracking} successfully modified! from ${data.last_status} to ${parcel.last_status}`)
+            console.log(`${parcel.tracking} successfully modified! from ${data.dc_recent_status} to ${parcel.last_status}`)
           }
 
           if (error) {
