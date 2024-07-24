@@ -117,7 +117,7 @@ const start = async () => {
       if (data && data.dc_recent_status !== parcel.last_status) {
         console.log(parcel.last_status)
         let dataOrder, errorOrder;
-        if (data.status !== 'delivered' ) {
+        if (data.status !== 'delivered' && data.status !== 'returned') {
           if (data.status !== parcel.status) {
             const {data: dataLocal, error: errorLocal} = await supabase
                 .from('orders')
