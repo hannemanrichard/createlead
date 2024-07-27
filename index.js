@@ -7,6 +7,46 @@ const supabaseUrl = "https://esgaekqgpyboghjhpwsk.supabase.co";
 const supabaseKey =
   "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZ2Fla3FncHlib2doamhwd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzI3NTEwNDAsImV4cCI6MTk4ODMyNzA0MH0.fVkl55mCYAz2ZfmOpyFxY0bZKfJqvLpcz6cn2F7vHDY";
 
+const statusArray = [
+  'Pas encore expédié',
+  'A vérifier',
+  'En préparation',
+  'Pas encore ramassé',
+  'Prêt à expédier',
+  'Ramassé',
+  'Transfert',
+  'Expédié',
+  'Centre',
+  'En localisation',
+  'Vers Wilaya',
+  'Reçu à Wilaya',
+  'En attente du client',
+  'Sorti en livraison',
+  'En attente',
+  'En alerte',
+  'Tentative échouée',
+  'Livré',
+  'Echèc livraison',
+  'Retour vers centre',
+  'Retourné au centre',
+  'Retour transfert',
+  'Retour groupé',
+  'Retour à retirer',
+  'Retour vers vendeur',
+  'Retourné au vendeur',
+  'Echange échoué',
+];
+const returned = [
+  'Echèc livraison',
+  'Retour vers centre',
+  'Retourné au centre',
+  'Retour transfert',
+  'Retour groupé',
+  'Retour à retirer',
+  'Retour vers vendeur',
+  'Retourné au vendeur',
+];
+
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // cron.schedule(
@@ -83,15 +123,7 @@ const start = async () => {
               last_status: parcel.status,
               status: orderStatus
             })
-            /*if (!!orderStatus) {
 
-            } else {
-              parcels.push({
-                tracking: parcel.tracking,
-                last_status: parcel.status
-              })
-            }*/
-            //console.log(orderStatus)
           } else {
 
             parcels.push({
@@ -153,6 +185,44 @@ const start = async () => {
         }
       }
     }
+
+    const data = {
+      extension: `?payment_status=not-ready&order_by=date_last_status&page_size=500`,
+    };
+    const response = await axios({
+      url: `https://ecom-api-1-f54q.onrender.com/`,
+      method: 'post',
+      headers: { 'Content-Type': 'application/json' },
+      data,
+    });
+
+    const parcelsData = response.data.data.data;
+
+    for (const parcel of parcelsData) {
+      let finalStatus;
+      if (returned.includes(parcel.last_status)) {
+        finalStatus = 'returned';
+      } else if (parcel.last_status === 'Livré') {
+        finalStatus = 'delivered';
+      } else if (parcel.last_status === 'En préparation') {
+        finalStatus = 'initial';
+      } else {
+        finalStatus = 'processing';
+      }
+      //console.log('final status ', finalStatus);
+      //console.log('date last: ', new Date(parcel.date_last_status));
+      const modifiedAt = new Date(parcel.date_last_status);
+      const { error } = await supabase
+          .from('orders')
+          .update({ status: finalStatus, yalidine_status: parcel.last_status, modified_at: modifiedAt })
+          .eq('tracking_id', parcel.tracking);
+
+      if (error) {
+        //console.log(error);
+        console.log(`Error: Failed to updated parcel ${parcel.tracking}`);
+      }
+    }
+
 
 
   } catch (error) {
