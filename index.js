@@ -1,233 +1,50 @@
-const cron = require("node-cron");
 const axios = require("axios");
+const express = require("express");
+const cors = require("cors");
+const https = require("https");
 const { createClient } = require("@supabase/supabase-js");
-const fs = require("fs");
+require("dotenv").config();
+const app = express();
 
-const supabaseUrl = "https://esgaekqgpyboghjhpwsk.supabase.co";
-const supabaseKey =
-  "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVzZ2Fla3FncHlib2doamhwd3NrIiwicm9sZSI6ImFub24iLCJpYXQiOjE2NzI3NTEwNDAsImV4cCI6MTk4ODMyNzA0MH0.fVkl55mCYAz2ZfmOpyFxY0bZKfJqvLpcz6cn2F7vHDY";
+app.use(cors());
+app.use(express.json());
 
-const statusArray = [
-  'Pas encore expédié',
-  'A vérifier',
-  'En préparation',
-  'Pas encore ramassé',
-  'Prêt à expédier',
-  'Ramassé',
-  'Transfert',
-  'Expédié',
-  'Centre',
-  'En localisation',
-  'Vers Wilaya',
-  'Reçu à Wilaya',
-  'En attente du client',
-  'Sorti en livraison',
-  'En attente',
-  'En alerte',
-  'Tentative échouée',
-  'Livré',
-  'Echèc livraison',
-  'Retour vers centre',
-  'Retourné au centre',
-  'Retour transfert',
-  'Retour groupé',
-  'Retour à retirer',
-  'Retour vers vendeur',
-  'Retourné au vendeur',
-  'Echange échoué',
-];
-const returned = [
-  'Echèc livraison',
-  'Retour vers centre',
-  'Retourné au centre',
-  'Retour transfert',
-  'Retour groupé',
-  'Retour à retirer',
-  'Retour vers vendeur',
-  'Retourné au vendeur',
-];
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-// cron.schedule(
-//   "1,4,7,10,13,16,19,22,25,28,31,34,37,40,43,46,49,52,55,58 * * * *",
-//   async () => {
-
-function changeTimeZone(date, timeZone) {
-  if (typeof date === "string") {
-    return new Date(
-      new Date(date).toLocaleString("en-US", {
-        timeZone,
-      })
-    );
-  }
-
-  return new Date(
-    date.toLocaleString("en-US", {
-      timeZone,
-    })
+if (!supabaseUrl || !supabaseKey) {
+  console.warn(
+    "Warning: SUPABASE_URL and/or SUPABASE_KEY are not set. Create a .env file or set environment variables."
   );
 }
 
-function formatDateTime() {
-  const date = new Date();
-
-  // Get date parts
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-
-  // Get time parts
-  const hours = String(date.getHours()).padStart(2, '0');
-  const minutes = String(date.getMinutes()).padStart(2, '0');
-  const seconds = String(date.getSeconds()).padStart(2, '0');
-
-  // Format date and time
-  const formattedDate = `${year}-${month}-${day}`;
-  const formattedTime = `${hours}:${minutes}:${seconds}`;
-
-  return `${formattedDate} ${formattedTime}`;
-}
-
-const start = async () => {
-  console.log("running a task on schedule");
+const supabase = createClient(supabaseUrl, supabaseKey);
+app.post("/api/create-lead", async (req, res) => {
   try {
-    // Retrieve parcels payment_status=not-ready&
-    let parcels = []
-    let arr = []
-    for (let i = 1; i < 22; i++) {
-      const parcelsResponse = await axios.get(
-          `https://app.conexlog-dz.com/api/v1/get/orders?api_token=9bwwR9RRZfUCcNtjnu4IrQyy3DULSohTiWg2ydQZMLGxh21DrapIueF3FCk5&page=${i}`,
-      );
-      console.log(`API called: ${i}`)
-      parcelsResponse.data.data.forEach((parcel) => {
-          if (parcel.status) {
-            let orderStatus;
-            const deliveredStatus = ['encaissé_non_payé', 'livré_non_encaissé', 'payé_et_archivé', 'paiements_prets']
-            const returnedStatus = ['retour_chez_livreur', 'retour_transit_entrepot', 'retour_en_traitement', 'retour_reçu', 'retour_archive', 'annule']
+    const agents_dict = [17, 38, 34];
+    const agentId = agents_dict[Math.floor(Math.random() * agents_dict.length)];
 
-            if (deliveredStatus.includes(parcel.status)) {
-              orderStatus = 'delivered'
-            }
-            else if (returnedStatus.includes(parcel.status)) {
-              orderStatus = 'returned'
-            } else if (parcel.status === 'prete_a_expedier') {
-              orderStatus = 'initial'
-            } else {
-              orderStatus = 'processing'
-            }
-
-
-            parcels.push({
-              tracking: parcel.tracking,
-              last_status: parcel.status,
-              status: orderStatus
-            })
-
-          } else {
-
-            parcels.push({
-              tracking: parcel.tracking,
-              status: 'processing',
-            })
-            //console.log('processing')
-          }
-      }
-      );
-    }
-
-    const currentDate = formatDateTime();
-
-    for (const parcel of parcels) {
-      const index = parcels.indexOf(parcel);
-      const {data, error} = await supabase
-          .from('orders')
-          .select()
-          .eq('tracking_id', parcel.tracking)
-          .single()
-
-      if (data && data.dc_recent_status !== parcel.last_status) {
-        console.log(parcel.last_status)
-        let dataOrder, errorOrder;
-        if (data.status !== 'delivered' && data.status !== 'returned') {
-          if (data.status !== parcel.status) {
-            const {data: dataLocal, error: errorLocal} = await supabase
-                .from('orders')
-                .update({
-                  dc_recent_status: parcel.last_status,
-                  modified_at: currentDate,
-                  status: parcel.status
-                })
-                .eq('tracking_id', parcel.tracking)
-                .select()
-            dataOrder = dataLocal;
-            errorOrder = errorLocal;
-          } else {
-            const {data: dataLocal, error: errorLocal} = await supabase
-                .from('orders')
-                .update(parcel.last_status ? {
-                  dc_recent_status: parcel.last_status,status: parcel.status
-                } : {status: parcel.status})
-                .eq('tracking_id', parcel.tracking)
-                .select()
-            dataOrder = dataLocal;
-            errorOrder = errorLocal;
-          }
-
-
-          if (data) {
-            console.log(`${parcel.tracking} successfully modified! from ${data.dc_recent_status} to ${parcel.last_status}`)
-          }
-
-          if (error) {
-            console.log(`${parcel.tracking} error occured!`)
-          }
-        }
-      }
-    }
-
-    const data = {
-      extension: `?payment_status=not-ready&order_by=date_last_status&page_size=500`,
-    };
-    const response = await axios({
-      url: `https://ecom-api-1-f54q.onrender.com/`,
-      method: 'post',
-      headers: { 'Content-Type': 'application/json' },
-      data,
+    const { fullName, offer, phone, address, channel } = req.body;
+    const { data, error } = await supabase.from("leads").insert({
+      first_name: fullName.split(" ")[0],
+      last_name: fullName.split(" ")[1] || "",
+      phone,
+      offer: `${offer}`,
+      agent_id: agentId,
+      status: "initial",
+      address: address || "",
+      channel: channel || "tiktok",
+      objective: "leadgen",
     });
-
-    const parcelsData = response.data.data.data;
-
-    for (const parcel of parcelsData) {
-      let finalStatus;
-      if (returned.includes(parcel.last_status)) {
-        finalStatus = 'returned';
-      } else if (parcel.last_status === 'Livré') {
-        finalStatus = 'delivered';
-      } else if (parcel.last_status === 'En préparation') {
-        finalStatus = 'initial';
-      } else {
-        finalStatus = 'processing';
-      }
-      //console.log('final status ', finalStatus);
-      //console.log('date last: ', new Date(parcel.date_last_status));
-      const modifiedAt = new Date(parcel.date_last_status);
-      const { error } = await supabase
-          .from('orders')
-          .update({ status: finalStatus, yalidine_status: parcel.last_status, modified_at: modifiedAt })
-          .eq('tracking_id', parcel.tracking);
-
-      if (error) {
-        //console.log(error);
-        console.log(`Error: Failed to updated parcel ${parcel.tracking}`);
-      }
+    if (error) {
+      return res.status(500).json({ error: error.message });
     }
-
-
-
+    return res.status(200).json({ message: "Lead created successfully" });
   } catch (error) {
-    console.log(error);
+    return res.status(500).json({ error: error.message });
   }
-};
+});
 
-start();
+app.listen(3000, () => {
+  console.log("Server is running on port 3000");
+});
