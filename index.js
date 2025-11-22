@@ -28,7 +28,7 @@ app.post("/api/create-lead", async (req, res) => {
     const { data: dataPrice, error: errorPrice } = await supabase
       .from("products")
       .select("retail_price, retail_price_2, retail_price_3")
-      .eq("product_name", product)
+      .eq("name", product)
       .single();
 
     if (errorPrice) {
@@ -43,7 +43,7 @@ app.post("/api/create-lead", async (req, res) => {
     ]
       .filter((p) => p !== null && p !== undefined && p !== "")
       .map((p) => String(p));
-
+    const { retail_price, retail_price_2, retail_price_3 } = dataPrice || {};
     // If we have any price parts use them joined with ' - ', otherwise fall back to the incoming offer
     // const priceValue = priceParts.length > 0 ? priceParts.join(" - ") : ``;
     const priceValue = `${retail_price ? `1 - ${retail_price} ` : ``}${
