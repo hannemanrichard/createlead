@@ -26,8 +26,8 @@ app.post("/api/create-lead", async (req, res) => {
 
     const { fullName, offer, phone, address, channel, product } = req.body;
     const { data: dataPrice, error: errorPrice } = await supabase
-      .from("product_info")
-      .select("price_one, price_two, price_three")
+      .from("products")
+      .select("retail_price, retail_price_2, retail_price_3")
       .eq("product_name", product)
       .single();
 
@@ -37,16 +37,18 @@ app.post("/api/create-lead", async (req, res) => {
 
     // Build a joined price string from the product_info fields, skipping null/undefined/empty
     const priceParts = [
-      dataPrice && dataPrice.price_one,
-      dataPrice && dataPrice.price_two,
-      dataPrice && dataPrice.price_three,
+      dataPrice && dataPrice.retail_price,
+      dataPrice && dataPrice.retail_price_2,
+      dataPrice && dataPrice.retail_price_3,
     ]
       .filter((p) => p !== null && p !== undefined && p !== "")
       .map((p) => String(p));
 
     // If we have any price parts use them joined with ' - ', otherwise fall back to the incoming offer
-    const priceValue = priceParts.length > 0 ? priceParts.join(" - ") : ``;
-
+    // const priceValue = priceParts.length > 0 ? priceParts.join(" - ") : ``;
+    const priceValue = `${retail_price ? `1 - ${retail_price} ` : ``}${
+      retail_price_2 ? ` 2 - ${retail_price_2 * 2} ` : ``
+    }${retail_price_3 ? ` 3 - ${retail_price_3 * 3}` : ``}`;
     const { data, error } = await supabase.from("leads").insert({
       first_name: fullName.split(" ")[0],
       last_name: fullName.split(" ")[1] || "",
