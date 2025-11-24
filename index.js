@@ -49,19 +49,32 @@ app.post("/api/create-lead", async (req, res) => {
     const priceValue = `${retail_price ? `1 - ${retail_price} ` : ``}${
       retail_price_2 ? ` 2 - ${retail_price_2 * 2} ` : ``
     }${retail_price_3 ? ` 3 - ${retail_price_3 * 3}` : ``}`;
-    const { data, error } = await supabase.from("leads").insert({
-      first_name: fullName.split(" ")[0],
-      last_name: fullName.split(" ")[1] || "",
-      phone,
-      offer: offer,
-      agent_id: agentId,
-      status: "initial",
-      address: address || "",
-      channel: channel || "tiktok",
-      objective: "leadgen",
-      price: priceValue,
-      product: product || "",
-    });
+    const { data, error } = await supabase
+      .from("leads")
+      .insert({
+        first_name: fullName.split(" ")[0],
+        last_name: fullName.split(" ")[1] || "",
+        phone,
+        offer: offer,
+        agent_id: agentId,
+        status: "initial",
+        address: address || "",
+        channel: channel || "tiktok",
+        objective: channel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
+        price: priceValue,
+        product: product || "",
+      })
+      .select()
+      .single();
+
+    if (data) {
+      const { error: errorHop } = await supabase
+        .from("lead_hop")
+        .insert({ lead_id: data.id, agent_id: agentId });
+      if (errorHop) {
+        console.log("something went wrong with hop: ", errorHop);
+      }
+    }
     if (error) {
       return res.status(500).json({ error: error.message });
     }
