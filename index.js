@@ -52,8 +52,8 @@ app.post("/api/create-lead", async (req, res) => {
     const { data, error } = await supabase
       .from("leads")
       .insert({
-        first_name: fullName.split(" ")[0],
-        last_name: fullName.split(" ")[1] || "",
+        first_name: fullName,
+        last_name: "",
         phone,
         offer: offer,
         agent_id: agentId,
