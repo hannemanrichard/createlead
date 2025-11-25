@@ -24,7 +24,19 @@ app.post("/api/create-lead", async (req, res) => {
     const agents_dict = [17, 38, 34];
     const agentId = agents_dict[Math.floor(Math.random() * agents_dict.length)];
 
+    // Sanitize inputs by removing control characters (newlines, tabs, etc.)
+    const sanitize = (str) => {
+      if (typeof str !== "string") return str;
+      return str.replace(/[\n\r\t\x00-\x1F\x7F]/g, " ").trim();
+    };
+
     const { fullName, offer, phone, address, channel, product } = req.body;
+    const sanitizedFullName = sanitize(fullName);
+    const sanitizedOffer = sanitize(offer);
+    const sanitizedPhone = sanitize(phone);
+    const sanitizedAddress = sanitize(address);
+    const sanitizedChannel = sanitize(channel);
+    const sanitizedProduct = sanitize(product);
     const { data: dataPrice, error: errorPrice } = await supabase
       .from("products")
       .select("retail_price, retail_price_2, retail_price_3")
@@ -52,17 +64,18 @@ app.post("/api/create-lead", async (req, res) => {
     const { data, error } = await supabase
       .from("leads")
       .insert({
-        first_name: fullName,
+        first_name: sanitizedFullName,
         last_name: "",
-        phone,
-        offer: offer,
+        phone: sanitizedPhone,
+        offer: sanitizedOffer,
         agent_id: agentId,
         status: "initial",
-        address: address || "",
-        channel: channel || "tiktok",
-        objective: channel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
+        address: sanitizedAddress || "",
+        channel: sanitizedChannel || "tiktok",
+        objective:
+          sanitizedChannel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
         price: priceValue,
-        product: product || "",
+        product: sanitizedProduct || "",
       })
       .select()
       .single();
