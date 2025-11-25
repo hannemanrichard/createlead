@@ -21,6 +21,7 @@ if (!supabaseUrl || !supabaseKey) {
 const supabase = createClient(supabaseUrl, supabaseKey);
 app.post("/api/create-lead", async (req, res) => {
   try {
+    console.log("Received request body:", req.body);
     const agents_dict = [17, 38, 34];
     const agentId = agents_dict[Math.floor(Math.random() * agents_dict.length)];
 
@@ -78,7 +79,20 @@ app.post("/api/create-lead", async (req, res) => {
     const priceValue = `${retail_price ? `1 - ${retail_price} ` : ``}${
       retail_price_2 ? ` 2 - ${retail_price_2 * 2} ` : ``
     }${retail_price_3 ? ` 3 - ${retail_price_3 * 3}` : ``}`;
-
+    console.log("input values2:", {
+      first_name: fullName,
+      last_name: "",
+      phone: phone,
+      offer: offer,
+      agent_id: agentId,
+      status: "initial",
+      address: address || "",
+      channel: channel || "tiktok",
+      objective:
+        sanitizedChannel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
+      price: priceValue,
+      product: sanitizedProduct || "",
+    });
     const { data, error } = await supabase
       .from("leads")
       .insert({
@@ -106,6 +120,20 @@ app.post("/api/create-lead", async (req, res) => {
         console.log("something went wrong with hop: ", errorHop);
       }
     }
+    console.log("input values3:", {
+      first_name: fullName,
+      last_name: "",
+      phone: phone,
+      offer: offer,
+      agent_id: agentId,
+      status: "initial",
+      address: address || "",
+      channel: channel || "tiktok",
+      objective:
+        sanitizedChannel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
+      price: priceValue,
+      product: sanitizedProduct || "",
+    });
     if (error) {
       return res.status(500).json({ error: error.message });
     }
