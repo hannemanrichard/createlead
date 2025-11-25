@@ -60,7 +60,7 @@ app.post("/api/create-lead", async (req, res) => {
         status: "initial",
         address: address || "",
         channel: channel || "tiktok",
-        objective: channel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
+        objective: channel === "meta" ? "meta-leadgen" : "tiktok-leadgen",
         price: priceValue,
         product: product || "",
       })
