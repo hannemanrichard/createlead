@@ -31,26 +31,29 @@ app.post("/api/create-lead", async (req, res) => {
     };
 
     const { fullName, offer, phone, address, channel, product } = req.body;
+
+    console.log("input values:", {
+      first_name: fullName,
+      last_name: "",
+      phone: phone,
+      offer: offer,
+      agent_id: agentId,
+      status: "initial",
+      address: address || "",
+      channel: channel || "tiktok",
+      objective:
+        sanitizedChannel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
+      price: priceValue,
+      product: sanitizedProduct || "",
+    });
+
     const sanitizedFullName = sanitize(fullName);
     const sanitizedOffer = sanitize(offer);
     const sanitizedPhone = sanitize(phone);
     const sanitizedAddress = sanitize(address);
     const sanitizedChannel = sanitize(channel);
     const sanitizedProduct = sanitize(product);
-    console.log("input values:", {
-      first_name: sanitizedFullName,
-      last_name: "",
-      phone: sanitizedPhone,
-      offer: sanitizedOffer,
-      agent_id: agentId,
-      status: "initial",
-      address: sanitizedAddress || "",
-      channel: sanitizedChannel || "tiktok",
-      objective:
-        sanitizedChannel === "tiktok" ? "tiktok-leadgen" : "meta-leadgen",
-      price: priceValue,
-      product: sanitizedProduct || "",
-    });
+
     const { data: dataPrice, error: errorPrice } = await supabase
       .from("products")
       .select("retail_price, retail_price_2, retail_price_3")
